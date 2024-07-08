@@ -2,24 +2,35 @@ package com.example.primera_aplicacion_javafx;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.fxml.Initializable;
+import javafx.scene.control.*;
 
+import java.net.URL;
 import java.util.Optional;
+import java.util.ResourceBundle;
 
-public class HelloController {
+public class HelloController implements Initializable{
     @FXML
     private Label welcomeText;
     @FXML
-    private TextField txtNombre; //Campo "Nombre" del formulario
+    private TextField txtNombres; //Campo "Nombre" del formulario
     @FXML
     private TextField txtApellidos; //Campo "Apellidos" del formulario
-
     @FXML
     protected void onHelloButtonClick() {
         welcomeText.setText("Welcome to JavaFX Application!");
+    }
+    @FXML
+    private  TextField txtMontoOrigen;
+    @FXML
+    private ChoiceBox<String> cbCodOrigen;
+    @FXML
+    private ChoiceBox<String> cbCodDestino;
+
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        cbCodOrigen.getItems().addAll("ARS","BRL","CLP","PYG","UYU","USD");
+        cbCodDestino.getItems().addAll("ARS","BRL","CLP","PYG","UYU","USD");
     }
 
     //Evento click en botón "Enviar"
@@ -27,7 +38,7 @@ public class HelloController {
     public void btEnviarClick(ActionEvent actionEvent) {
         //Obtenemos el nombre y apellidos introducidos por
         //el usuario en los campos TextField de la ventana gráfica
-        String nombre = txtNombre.getText();
+        String nombre = txtNombres.getText();
         String apellidos = txtApellidos.getText();
 
         //Mostramos el nombre introducido en la consola (solo para depuración)
@@ -43,13 +54,13 @@ public class HelloController {
             alert.setTitle("Faltan datos...");
             alert.setHeaderText("Faltan datos por introducir en el formulario.");
             alert.setContentText("Debe introducir el nombre y los apellidos.");
-            txtNombre.requestFocus();
+            txtNombres.requestFocus();
         } else {
             alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Datos introducidos en el formulario...");
             alert.setHeaderText("Ha introducido correctamente los " +
                     "datos en el formulario. Se muestran a continuación.");
-            alert.setContentText("Nombre: " + nombre +
+            alert.setContentText("Nombres: " + nombre +
                     System.lineSeparator() + "Apellidos: " + apellidos);
         }
         alert.showAndWait();
@@ -59,8 +70,8 @@ public class HelloController {
     //Vaciaremos los valores introducidos en los TextField
     public void btLimpiarClick(ActionEvent actionEvent) {
         txtApellidos.setText("");
-        txtNombre.setText("");
-        txtNombre.requestFocus();
+        txtNombres.setText("");
+        txtNombres.requestFocus();
     }
 
     //Evento click en botón "Salir"
@@ -76,8 +87,33 @@ public class HelloController {
         if (result.get() == ButtonType.OK){
             System.exit(0);
         } else { //Si se ha pulsado el botón "Cancelar" enfocamos en el TextField Nombre
-            txtNombre.requestFocus();
+            txtNombres.requestFocus();
         }
+    }
+
+    public void btSalir2Click(ActionEvent actionEvent) {
+        //Mostramos mensaje de confirmación para cerrar la aplicación
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Cerrar aplicación...");
+        alert.setHeaderText(null);
+        alert.setContentText("           Gracias por utilizar nuestro" + "\n" +
+                             "           CONVERSOR DE MONEDAS" + "\n" +
+                             "    _by_______________________________AAF_");
+        Optional<ButtonType> result = alert.showAndWait();
+        //Si se ha pulsado el botón "Aceptar"
+        if (result.get() == ButtonType.OK){
+            System.exit(0);
+        } else { //Si se ha pulsado el botón "Cancelar" enfocamos en el TextField Nombre
+            txtMontoOrigen.requestFocus();
+        }
+    }
+
+    public void btConvertirClick(ActionEvent actionEvent) {
+        String origen = cbCodOrigen.getSelectionModel().getSelectedItem();
+        System.out.println(origen);
+        String destino = cbCodDestino.getSelectionModel().getSelectedItem();
+        System.out.println(destino);
+
     }
 
 }
