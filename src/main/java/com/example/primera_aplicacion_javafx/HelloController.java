@@ -1,11 +1,25 @@
 package com.example.primera_aplicacion_javafx;
 
+import com.example.primera_aplicacion_javafx.excepcion.ErrorEnResultado;
+import com.example.primera_aplicacion_javafx.modelo.CalculadoraDeCambio;
+import com.example.primera_aplicacion_javafx.modelo.Exchange;
+import com.example.primera_aplicacion_javafx.modelo.Resultado;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
@@ -17,20 +31,29 @@ public class HelloController implements Initializable{
     @FXML
     private TextField txtApellidos; //Campo "Apellidos" del formulario
     @FXML
-    protected void onHelloButtonClick() {
-        welcomeText.setText("Welcome to JavaFX Application!");
-    }
+    private TextField txtMontoOrigen;
+//    @FXML
+//    private TextField txtMontoDestino;
     @FXML
-    private  TextField txtMontoOrigen;
+    private Label montoDestino;
     @FXML
     private ChoiceBox<String> cbCodOrigen;
     @FXML
     private ChoiceBox<String> cbCodDestino;
+    @FXML
+    private Label txtMsgValidacion;
+
+    private List<String> resultados = new ArrayList<>();
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         cbCodOrigen.getItems().addAll("ARS","BRL","CLP","PYG","UYU","USD");
         cbCodDestino.getItems().addAll("ARS","BRL","CLP","PYG","UYU","USD");
+    }
+
+    @FXML
+    protected void onHelloButtonClick() {
+        welcomeText.setText("Welcome to JavaFX Application!");
     }
 
     //Evento click en botón "Enviar"
@@ -108,12 +131,120 @@ public class HelloController implements Initializable{
         }
     }
 
+    @FXML
     public void btConvertirClick(ActionEvent actionEvent) {
-        String origen = cbCodOrigen.getSelectionModel().getSelectedItem();
-        System.out.println(origen);
-        String destino = cbCodDestino.getSelectionModel().getSelectedItem();
-        System.out.println(destino);
+        String base = cbCodOrigen.getSelectionModel().getSelectedItem();
+        System.out.println(base);
+        String cambio = cbCodDestino.getSelectionModel().getSelectedItem();
+        System.out.println(cambio);
 
+        String montoBaseString = txtMontoOrigen.getText();
+
+        int cantidadResultados = 0;
+        txtMsgValidacion.setText("");
+
+        Alert alert;
+
+        Gson gson = new GsonBuilder()
+                .setPrettyPrinting()
+                .create();
+
+        String direccion = "https://v6.exchangerate-api.com/v6/ca50e60632206d99d58846b2/pair/"+
+                base.toUpperCase()+"/"+cambio.toUpperCase();
+        System.out.println(direccion);
+
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(direccion))
+                    .build();
+            HttpResponse<String> response = client
+                    .send(request, HttpResponse.BodyHandlers.ofString());
+
+            String json = response.body();
+            //System.out.println("Json CRUDO: "+json);
+
+
+            if (json.contains("<html>")||(json.contains("error"))) {
+                alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Error validación...");
+                alert.setHeaderText("Datos ingresados incorrectos");
+                alert.setContentText("Debe introducir el origen y destino de monedas");
+                alert.showAndWait();
+                cbCodOrigen.requestFocus();
+            }
+
+            Exchange intercambio = gson.fromJson(json, Exchange.class);
+            //System.out.println(intercambio);
+
+            double montoBase = Double.parseDouble(montoBaseString);
+
+            Resultado paraCalcular = new Resultado(intercambio);
+            CalculadoraDeCambio calcular = new CalculadoraDeCambio();
+            calcular.calculaIntercambio(montoBase, paraCalcular);
+
+            var montoIntercambio = String.format("%.2f", calcular.getMontoIntercambio());
+            System.out.println(montoIntercambio);
+
+            montoDestino.setText(montoIntercambio);
+            //TextField txtMontoDestino = new TextField(montoIntercambio);
+
+            Resultado miresultado = new Resultado(intercambio);
+
+            cantidadResultados++;
+
+//            System.out.println("-------------------------------------------");
+//            System.out.println("Tasa de Conversión: 1 " + miresultado + " " + intercambio.conversion_rate());
+//            System.out.println("-------------------------------------------");
+//            System.out.println("Intercambio Nro: " + cantidadResultados);
+//            System.out.println("-------------------------------------------");
+
+            String registro = cantidadResultados + ". " + montoBase + " " + miresultado + " " + String.format("%.2f", calcular.getMontoIntercambio());
+            System.out.println(registro);
+            //System.out.println("-------------------------------------------");
+
+            resultados.add(registro);
+
+        }catch (ErrorEnResultado e){
+            alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Error...");
+            alert.setHeaderText("Mensage de error ...");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+            //System.out.println(e.getMessage());
+        }catch (NumberFormatException e){alert = new Alert(Alert.AlertType.WARNING);
+            alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Error...");
+            alert.setHeaderText("Mensage de error ...");
+            alert.setContentText("No ingresó un monto numérico válido");
+            alert.showAndWait();
+            txtMsgValidacion.setText("<-- Ingrese números");
+            //System.out.println("_-= No ingresó un monto numérico válido =-_");
+            //System.out.println(e.getMessage());
+        }catch (ConnectException e){
+            alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Error...");
+            alert.setHeaderText("Mensage de error ...");
+            alert.setContentText("Error de conexion");
+            alert.showAndWait();
+            //System.out.println("_-= Error de conexion =-_");
+        } catch (IOException | InterruptedException e) {
+            //throw new RuntimeException(e);
+            alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Error...");
+            alert.setHeaderText("Mensage de error ...");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+        }
+    }
+
+    public void btListadoConversionesClick(ActionEvent actionEvent) {
+        Alert alert;
+        alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Lista de Conversiones...");
+        alert.setHeaderText("Lista de conversiones");
+        alert.setContentText(resultados.toString());
+        alert.showAndWait();
     }
 
 }
